@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS Calculator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .calculator {
+            width: 320px;
+            background-color: #000;
+            padding: 20px;
+            border-radius: 40px;
+        }
+
+        .display-container {
+            width: 100%;
+            height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            padding: 0 10px 10px 10px;
+            overflow: hidden;
+        }
+
+        .display {
+            color: #fff;
+            font-size: 70px;
+            font-weight: 300;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        button {
+            border: none;
+            outline: none;
+            height: 64px;
+            width: 64px;
+            border-radius: 50%;
+            font-size: 26px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: brightness 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button:active {
+            filter: brightness(1.3);
+        }
+
+        /* Gray top buttons */
+        .btn-gray {
+            background-color: #a5a5a5;
+            color: #000;
+        }
+
+        /* Orange operator buttons */
+        .btn-orange {
+            background-color: #ff9f0a;
+            color: #fff;
+            font-size: 30px;
+        }
+
+        .btn-orange.active {
+            background-color: #fff;
+            color: #ff9f0a;
+        }
+
+        /* Dark gray number buttons */
+        .btn-dark {
+            background-color: #333333;
+            color: #fff;
+        }
+
+        /* Zero button layout */
+        .btn-zero {
+            grid-column: span 2;
+            width: 100%;
+            border-radius: 32px;
+            justify-content: flex-start;
+            padding-left: 24px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator">
+        <div class="display-container">
+            <div class="display" id="display">0</div>
+        </div>
+        <div class="buttons">
+            <button class="btn-gray" onclick="clearDisplay()" id="clear-btn">AC</button>
+            <button class="btn-gray" onclick="toggleSign()">+/-</button>
+            <button class="btn-gray" onclick="inputPercent()">%</button>
+            <button class="btn-orange operator" onclick="handleOperator('/')">÷</button>
+
+            <button class="btn-dark" onclick="inputNumber('7')">7</button>
+            <button class="btn-dark" onclick="inputNumber('8')">8</button>
+            <button class="btn-dark" onclick="inputNumber('9')">9</button>
+            <button class="btn-orange operator" onclick="handleOperator('*')">×</button>
+
+            <button class="btn-dark" onclick="inputNumber('4')">4</button>
+            <button class="btn-dark" onclick="inputNumber('5')">5</button>
+            <button class="btn-dark" onclick="inputNumber('6')">6</button>
+            <button class="btn-orange operator" onclick="handleOperator('-')">−</button>
+
+            <button class="btn-dark" onclick="inputNumber('1')">1</button>
+            <button class="btn-dark" onclick="inputNumber('2')">2</button>
+            <button class="btn-dark" onclick="inputNumber('3')">3</button>
+            <button class="btn-orange operator" onclick="handleOperator('+')">+</button>
+
+            <button class="btn-dark btn-zero" onclick="inputNumber('0')">0</button>
+            <button class="btn-dark" onclick="inputDecimal()">.</button>
+            <button class="btn-orange" onclick="calculate()">=</button>
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        const clearBtn = document.getElementById('clear-btn');
+        
+        let displayValue = '0';
+        let firstOperand = null;
+        let waitingForSecondOperand = false;
+        let operator = null;
+
+        function updateDisplay() {
+            display.innerText = formatDisplay(displayValue);
+            
+            // Text auto-scaling for long numbers
+            if (displayValue.length > 6) {
+                display.style.fontSize = '45px';
+            } else {
+                display.style.fontSize = '70px';
+            }
+            
+            // Toggle AC/C text
+            clearBtn.innerText = displayValue === '0' && !firstOperand ? 'AC' : 'C';
+        }
+
+        function formatDisplay(value) {
+            if (value === 'Error') return value;
+            const parts = value.split('.');
+            parts[0] = parseFloat(parts[0]).toLocaleString('en-US', { maximumFractionDigits: 0 });
+            return parts.length > 1 ? parts[0] + '.' + parts[1] : parts[0];
+        }
+
+        function inputNumber(num) {
+            clearActiveOperator();
+            if (waitingForSecondOperand) {
+                displayValue = num;
+                waitingForSecondOperand = false;
+            } else {
+                if (displayValue === '0') {
+                    displayValue = num;
+                } else if (displayValue.replace(/[^0-9]/g, '').length < 9) { // Max 9 digits
+                    displayValue += num;
+                }
+            }
+            updateDisplay();
+        }
+
+        function inputDecimal() {
+            if (waitingForSecondOperand) {
+                displayValue = '0.';
+                waitingForSecondOperand = false;
+                updateDisplay();
+                return;
+            }
+            if (!displayValue.includes('.')) {
+                displayValue += '.';
+            }
+            updateDisplay();
+        }
+
+        function toggleSign() {
+            displayValue = (parseFloat(displayValue) * -1).toString();
+            updateDisplay();
+        }
+
+        function inputPercent() {
+            displayValue = (parseFloat(displayValue) / 100).toString();
+            updateDisplay();
+        }
+
+        function handleOperator(nextOperator) {
+            const inputValue = parseFloat(displayValue);
+
+            clearActiveOperator();
+            // Highlight the selected operator button
+            event.target.classList.add('active');
+
+            if (operator && waitingForSecondOperand)  {
+                operator = nextOperator;
+                return;
+            }
+
+            if (firstOperand === null && !isNaN(inputValue)) {
+                firstOperand = inputValue;
+            } else if (operator) {
+                const result = performCalculation[operator](firstOperand, inputValue);
+                displayValue = String(Number(result.toFixed(7))); // Limits decimal issues
+                firstOperand = result;
+            }
+
+            waitingForSecondOperand = true;
+            operator = nextOperator;
+            updateDisplay();
+        }
+
+        const performCalculation = {
+            '/': (firstOperand, secondOperand) => secondOperand === 0 ? 'Error' : firstOperand / secondOperand,
+            '*': (firstOperand, secondOperand) => firstOperand * secondOperand,
+            '+': (firstOperand, secondOperand) => firstOperand + secondOperand,
+            '-': (firstOperand, secondOperand) => firstOperand - secondOperand
+        };
+
+        function calculate() {
+            clearActiveOperator();
+            if (operator === null || waitingForSecondOperand) return;
+
+            const inputValue = parseFloat(displayValue);
+            const result = performCalculation[operator](firstOperand, inputValue);
+
+            if (result === 'Error') {
+                displayValue = 'Error';
+            } else {
+                displayValue = String(Number(result.toFixed(7)));
+            }
+            
+            firstOperand = null;
+            operator = null;
+            waitingForSecondOperand = false;
+            updateDisplay();
+        }
+
+        function clearDisplay() {
+            clearActiveOperator();
+            displayValue = '0';
+            firstOperand = null;
+            operator = null;
+            waitingForSecondOperand = false;
+            updateDisplay();
+        }
+
+        function clearActiveOperator() {
+            document.querySelectorAll('.operator').forEach(btn => btn.classList.remove('active'));
+        }
+
+        updateDisplay();
+    </script>
+</body>
+</html>
