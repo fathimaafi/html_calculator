@@ -1,0 +1,31 @@
+name: Deploy Application to GCP VM
+
+on:
+  push:
+    branches:
+      - main  # Triggers when code pushes to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Download code from repository into workflow runner
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    # Step 2: Connect to GCP VM via SSH and deploy code changes
+    - name: SSH and Deploy to VM
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        port: 22
+        script: |
+          # 1. Define target directory path
+          export APP_DIR="/var/www/html"
+          
+          # 2. Clone the repository if it doesn't exist, otherwise pull changes
+          if [ ! -d "$APP_DIR" ]; then
+            git clone 
