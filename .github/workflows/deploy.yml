@@ -28,4 +28,11 @@ jobs:
           
           # 2. Clone the repository if it doesn't exist, otherwise pull changes
           if [ ! -d "$APP_DIR" ]; then
-            git clone 
+            git clone ${{ secrets.REPO_URL }} "$APP_DIR"
+          else
+            cd "$APP_DIR" && git pull
+          fi
+          
+          # 3. Restart the application (adjust as needed)
+          cd "$APP_DIR"
+          systemctl restart nginx.service
