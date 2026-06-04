@@ -24,7 +24,7 @@ jobs:
         port: 22
         script: |
           # 1. Define target directory path
-          export APP_DIR="/var/www/html"
+          export APP_DIR="/home/${{ secrets.VM_USER }}/calculator"
           
           # 2. Clone the repository if it doesn't exist, otherwise pull changes
           if [ ! -d "$APP_DIR" ]; then
