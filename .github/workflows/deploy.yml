@@ -1,21 +1,21 @@
-name: Deploy Application to GCP VM
+name: Deploy Simple Calculator to GCP VM
 
 on:
   push:
     branches:
-      - main  # Triggers when code pushes to main branch
+      - main  # Triggers when you push code to the main branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Download code from repository into workflow runner
+    # Step 1: Pull the HTML file from your repository into the workflow runner
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    # Step 2: Connect to GCP VM via SSH and deploy code changes
-    - name: SSH and Deploy to VM
+    # Step 2: Ensure the target directory exists on the VM and set permissions
+    - name: Prepare VM Directories
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VM_HOST }}
@@ -23,16 +23,29 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
         script: |
-          # 1. Define target directory path
-          export APP_DIR="/home/${{ secrets.VM_USER }}/calculator"
-          
-          # 2. Clone the repository if it doesn't exist, otherwise pull changes
-          if [ ! -d "$APP_DIR" ]; then
-            git clone ${{ secrets.REPO_URL }} "$APP_DIR"
-          else
-            cd "$APP_DIR" && git pull
-          fi
-          
-          # 3. Restart the application (adjust as needed)
-          cd "$APP_DIR"
-          systemctl restart nginx.service
+          sudo mkdir -p /var/www/html
+          sudo chown -R ${{ secrets.VM_USER }}:www-data /var/www/html
+          sudo chmod -R 755 /var/www/html
+
+    # Step 3: Copy your index.html file directly over to the VM
+    - name: Copy index.html to VM Web Directory
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        port: 22
+        source: "index.html"   # Selects your native index.html file
+        target: "/var/www/html/index.html"
+        overwrite: true  # Overwrite any existing file with the same name
+
+    # Step 4: Restart the web server to apply changes (if necessary)
+    - name: Restart Web Server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        port: 22
+        script: |
+          sudo systemctl restart nginx  # Adjust if using a different web server (e.g., apache2)
