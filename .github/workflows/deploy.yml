@@ -35,12 +35,12 @@ jobs:
         username: ${{ secrets.VM_USER }}
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
-        source: "index.html"   # Selects your native index.html file
-        target: "/var/www/html"
-        overwrite: true  # Overwrite any existing file with the same name
+        source: "index.html"
+        target: "/tmp"
+        overwrite: true
 
-    # Step 4: Restart the web server to apply changes (if necessary)
-    - name: Restart Web Server
+    # Step 4: Move file to web root and restart web server
+    - name: Deploy and Restart Web Server
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VM_HOST }}
@@ -48,4 +48,7 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
         script: |
-          sudo systemctl restart nginx  # Adjust if using a different web server (e.g., apache2)
+          sudo mv /tmp/index.html /var/www/html/index.html
+          sudo chown www-data:www-data /var/www/html/index.html
+          sudo chmod 644 /var/www/html/index.html
+          sudo systemctl restart nginx
