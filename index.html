@@ -39,6 +39,17 @@
             overflow: hidden;
         }
 
+        .expression {
+            color: #888;
+            font-size: 22px;
+            font-weight: 300;
+            white-space: nowrap;
+            max-width: 100%;
+            min-height: 28px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .display {
             color: #fff;
             font-size: 70px;
@@ -110,6 +121,7 @@
 
     <div class="calculator">
         <div class="display-container">
+            <div class="expression" id="expression"></div>
             <div class="display" id="display">0</div>
         </div>
         <div class="buttons">
@@ -141,7 +153,10 @@
 
     <script>
         const display = document.getElementById('display');
+        const expression = document.getElementById('expression');
         const clearBtn = document.getElementById('clear-btn');
+
+        const operatorSymbols = { '/': '÷', '*': '×', '+': '+', '-': '−' };
         
         let displayValue = '0';
         let firstOperand = null;
@@ -150,14 +165,26 @@
 
         function updateDisplay() {
             display.innerText = formatDisplay(displayValue);
-            
+
             // Text auto-scaling for long numbers
             if (displayValue.length > 6) {
                 display.style.fontSize = '45px';
             } else {
                 display.style.fontSize = '70px';
             }
-            
+
+            // Update expression preview line
+            if (operator && firstOperand !== null) {
+                const sym = operatorSymbols[operator];
+                if (waitingForSecondOperand) {
+                    expression.innerText = formatDisplay(String(firstOperand)) + ' ' + sym;
+                } else {
+                    expression.innerText = formatDisplay(String(firstOperand)) + ' ' + sym + ' ' + formatDisplay(displayValue);
+                }
+            } else {
+                expression.innerText = '';
+            }
+
             // Toggle AC/C text
             clearBtn.innerText = displayValue === '0' && !firstOperand ? 'AC' : 'C';
         }
