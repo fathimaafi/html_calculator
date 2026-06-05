@@ -36,7 +36,7 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
         source: "index.html"   # Selects your native index.html file
-        target: "/var/www/html/index.html"
+        target: "/var/www/html"
         overwrite: true  # Overwrite any existing file with the same name
 
     # Step 4: Restart the web server to apply changes (if necessary)
