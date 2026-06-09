@@ -1,0 +1,10 @@
+# Ignore local environment variables and configurations
+terraform.tfvars
+
+# Ignore hidden Terraform provider caching files
+.terraform/
+.terraform.lock.hcl
+
+# Ignore the state database files (Crucial for privacy)
+terraform.tfstate
+terraform.tfstate.backup
