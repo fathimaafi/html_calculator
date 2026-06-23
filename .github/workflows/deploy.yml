@@ -15,17 +15,38 @@ jobs:
       uses: actions/checkout@v4
 
     # Step 2: Copy files to VM
-    - name: Copy Files to VM
+    - name: Copy index.html to VM
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.VM_HOST }}
         username: ${{ secrets.VM_USER }}
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
-        source: "index.html,Dockerfile,nginx.conf"
+        source: "index.html"
         target: "/tmp/calculator"
         overwrite: true
-        strip_components: 1
+
+    - name: Copy Dockerfile to VM
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        port: 22
+        source: "Dockerfile"
+        target: "/tmp/calculator"
+        overwrite: true
+
+    - name: Copy nginx.conf to VM
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        port: 22
+        source: "nginx.conf"
+        target: "/tmp/calculator"
+        overwrite: true
 
     # Step 3: Deploy - builds container on first run, just updates file on subsequent pushes
     - name: Deploy to VM
@@ -36,7 +57,7 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
         script: |
-          # Always update index.html in web root
+          # Move index.html to web root
           sudo mv /tmp/calculator/index.html /var/www/html/index.html
           sudo chown www-data:www-data /var/www/html/index.html
           sudo chmod 644 /var/www/html/index.html
