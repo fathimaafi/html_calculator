@@ -45,17 +45,13 @@ jobs:
           if ! sudo docker ps --format '{{.Names}}' | grep -q '^calculator$'; then
             echo "Container not running, building and starting..."
 
-            # Stop VM's native nginx to free port 80
-            sudo systemctl stop nginx || true
-            sudo systemctl disable nginx || true
-
             cd /tmp/calculator
             sudo docker build -t calculator:latest .
 
             sudo docker run -d \
               --name calculator \
               --restart always \
-              -p 80:80 \
+              -p 8080:8080 \
               -v /var/www/html:/usr/share/nginx/html:ro \
               calculator:latest
 
