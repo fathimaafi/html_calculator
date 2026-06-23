@@ -42,7 +42,7 @@ jobs:
           sudo chmod 644 /var/www/html/index.html
 
           # Only build and start container if it's not already running
-          if ! docker ps --format '{{.Names}}' | grep -q '^calculator$'; then
+          if ! sudo docker ps --format '{{.Names}}' | grep -q '^calculator$'; then
             echo "Container not running, building and starting..."
 
             # Stop VM's native nginx to free port 80
@@ -50,16 +50,16 @@ jobs:
             sudo systemctl disable nginx || true
 
             cd /tmp/calculator
-            docker build -t calculator:latest .
+            sudo docker build -t calculator:latest .
 
-            docker run -d \
+            sudo docker run -d \
               --name calculator \
               --restart always \
               -p 80:80 \
               -v /var/www/html:/usr/share/nginx/html:ro \
               calculator:latest
 
-            docker image prune -f
+            sudo docker image prune -f
           else
             echo "Container already running, index.html updated - no restart needed"
           fi
