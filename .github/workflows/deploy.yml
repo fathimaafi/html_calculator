@@ -25,6 +25,7 @@ jobs:
         source: "index.html,Dockerfile,nginx.conf"
         target: "/tmp/calculator"
         overwrite: true
+        strip_components: 1
 
     # Step 3: Deploy - builds container on first run, just updates file on subsequent pushes
     - name: Deploy to VM
