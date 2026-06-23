@@ -208,9 +208,13 @@
                 displayValue = num;
                 waitingForSecondOperand = false;
             } else {
-                if (displayValue === '0') {
+                // If result was just shown, start fresh
+                if (firstOperand === null && operator === null && expressionHistory) {
+                    expressionHistory = '';
                     displayValue = num;
-                } else if (displayValue.replace(/[^0-9]/g, '').length < 9) { // Max 9 digits
+                } else if (displayValue === '0') {
+                    displayValue = num;
+                } else if (displayValue.replace(/[^0-9]/g, '').length < 9) {
                     displayValue += num;
                 }
             }
@@ -299,26 +303,21 @@
             const inputValue = parseFloat(displayValue);
             const result = performCalculation[operator](firstOperand, inputValue);
 
-            // Complete the expression chain for display
+            // Complete the full expression: "1 + 2 + 3"
             if (expressionHistory && result !== 'Error') {
-                expressionHistory += ' ' + formatDisplay(String(inputValue));
+                expressionHistory += ' ' + formatDisplay(String(inputValue)) + ' =';
             }
 
             if (result === 'Error') {
                 displayValue = 'Error';
+                expressionHistory = '';
             } else {
                 displayValue = String(Number(result.toFixed(7)));
             }
-            
-            // Clear expression after showing result briefly
-            setTimeout(() => {
-                expressionHistory = '';
-                firstOperand = null;
-                operator = null;
-                waitingForSecondOperand = false;
-                updateExpression();
-            }, 1000);
-            
+
+            firstOperand = null;
+            operator = null;
+            waitingForSecondOperand = false;
             updateDisplay();
         }
 
