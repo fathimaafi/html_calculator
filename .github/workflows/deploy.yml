@@ -3,44 +3,31 @@ name: Deploy Simple Calculator to GCP VM
 on:
   push:
     branches:
-      - main  # Triggers when you push code to the main branch
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    # Step 1: Pull the HTML file from your repository into the workflow runner
+    # Step 1: Checkout source code
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    # Step 2: Ensure the target directory exists on the VM and set permissions
-    - name: Prepare VM Directories
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.VM_HOST }}
-        username: ${{ secrets.VM_USER }}
-        key: ${{ secrets.VM_SSH_KEY }}
-        port: 22
-        script: |
-          sudo mkdir -p /var/www/html
-          sudo chown -R ${{ secrets.VM_USER }}:www-data /var/www/html
-          sudo chmod -R 755 /var/www/html
-
-    # Step 3: Copy your index.html file directly over to the VM
-    - name: Copy index.html to VM Web Directory
+    # Step 2: Copy files to VM
+    - name: Copy Files to VM
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.VM_HOST }}
         username: ${{ secrets.VM_USER }}
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
-        source: "index.html"
-        target: "/tmp"
+        source: "index.html,Dockerfile,nginx.conf"
+        target: "/tmp/calculator"
         overwrite: true
 
-    # Step 4: Move file to web root and restart web server
-    - name: Deploy and Restart Web Server
+    # Step 3: Deploy - builds container on first run, just updates file on subsequent pushes
+    - name: Deploy to VM
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VM_HOST }}
@@ -48,7 +35,30 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
         script: |
-          sudo mv /tmp/index.html /var/www/html/index.html
+          # Always update index.html in web root
+          sudo mv /tmp/calculator/index.html /var/www/html/index.html
           sudo chown www-data:www-data /var/www/html/index.html
           sudo chmod 644 /var/www/html/index.html
-          sudo systemctl restart nginx
+
+          # Only build and start container if it's not already running
+          if ! docker ps --format '{{.Names}}' | grep -q '^calculator$'; then
+            echo "Container not running, building and starting..."
+
+            # Stop VM's native nginx to free port 80
+            sudo systemctl stop nginx || true
+            sudo systemctl disable nginx || true
+
+            cd /tmp/calculator
+            docker build -t calculator:latest .
+
+            docker run -d \
+              --name calculator \
+              --restart always \
+              -p 80:80 \
+              -v /var/www/html:/usr/share/nginx/html:ro \
+              calculator:latest
+
+            docker image prune -f
+          else
+            echo "Container already running, index.html updated - no restart needed"
+          fi
