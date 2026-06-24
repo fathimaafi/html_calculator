@@ -60,8 +60,16 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
         script: |
-          if ! sudo docker ps --format '{{.Names}}' | grep -q '^calculator$'; then
-            echo "First deploy - building and starting container..."
+          # Force rebuild if nginx.conf changed
+          NGINX_HASH=$(md5sum /var/www/html/nginx.conf | awk '{print $1}')
+          STORED_HASH=$(cat /tmp/nginx_conf_hash 2>/dev/null || echo "")
+
+          if ! sudo docker ps --format '{{.Names}}' | grep -q '^calculator$' || [ "$NGINX_HASH" != "$STORED_HASH" ]; then
+            echo "Building and starting container..."
+
+            sudo docker stop calculator || true
+            sudo docker rm calculator || true
+            sudo docker rmi calculator:latest || true
 
             cd /var/www/html
             sudo docker build -t calculator:latest .
@@ -74,6 +82,7 @@ jobs:
               calculator:latest
 
             sudo docker image prune -f
+            echo "$NGINX_HASH" > /tmp/nginx_conf_hash
           else
             echo "Container running - index.html updated via volume mount, no restart needed"
           fi
