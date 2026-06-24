@@ -14,42 +14,16 @@ jobs:
     - name: Checkout Source Code
       uses: actions/checkout@v4
 
-    # Step 2: Copy files to VM
-    - name: Copy index.html to VM
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.VM_HOST }}
-        username: ${{ secrets.VM_USER }}
-        key: ${{ secrets.VM_SSH_KEY }}
-        port: 22
-        source: "index.html"
-        target: "/tmp/calculator"
-        overwrite: true
+    # Step 2: Setup SSH key
+    - name: Setup SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.VM_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Copy Dockerfile to VM
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.VM_HOST }}
-        username: ${{ secrets.VM_USER }}
-        key: ${{ secrets.VM_SSH_KEY }}
-        port: 22
-        source: "Dockerfile"
-        target: "/tmp/calculator"
-        overwrite: true
-
-    - name: Copy nginx.conf to VM
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.VM_HOST }}
-        username: ${{ secrets.VM_USER }}
-        key: ${{ secrets.VM_SSH_KEY }}
-        port: 22
-        source: "nginx.conf"
-        target: "/tmp/calculator"
-        overwrite: true
-
-    # Step 3: Deploy - builds container on first run, just updates file on subsequent pushes
-    - name: Deploy to VM
+    # Step 3: Ensure /var/www/html exists with correct permissions
+    - name: Prepare Web Root
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VM_HOST }}
@@ -57,16 +31,37 @@ jobs:
         key: ${{ secrets.VM_SSH_KEY }}
         port: 22
         script: |
-          # Move index.html to web root
-          sudo mv /tmp/calculator/index.html /var/www/html/index.html
-          sudo chown www-data:www-data /var/www/html/index.html
-          sudo chmod 644 /var/www/html/index.html
+          sudo mkdir -p /var/www/html
+          sudo chown ${{ secrets.VM_USER }}:${{ secrets.VM_USER }} /var/www/html
+          sudo chmod 755 /var/www/html
 
-          # Only build and start container if it's not already running
+    # Step 4: Copy index.html directly to /var/www/html
+    - name: Copy index.html to Web Root
+      run: |
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          index.html \
+          ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/var/www/html/index.html
+
+    # Step 5: Copy Dockerfile and nginx.conf to /var/www/html for docker build
+    - name: Copy Docker files to VM
+      run: |
+        scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          Dockerfile nginx.conf \
+          ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}:/var/www/html/
+
+    # Step 6: Build and run Docker container on first deploy, skip on subsequent pushes
+    - name: Deploy Docker Container
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VM_HOST }}
+        username: ${{ secrets.VM_USER }}
+        key: ${{ secrets.VM_SSH_KEY }}
+        port: 22
+        script: |
           if ! sudo docker ps --format '{{.Names}}' | grep -q '^calculator$'; then
-            echo "Container not running, building and starting..."
+            echo "First deploy - building and starting container..."
 
-            cd /tmp/calculator
+            cd /var/www/html
             sudo docker build -t calculator:latest .
 
             sudo docker run -d \
@@ -78,5 +73,5 @@ jobs:
 
             sudo docker image prune -f
           else
-            echo "Container already running, index.html updated - no restart needed"
+            echo "Container running - index.html updated via volume mount, no restart needed"
           fi
