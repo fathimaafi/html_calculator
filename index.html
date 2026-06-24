@@ -233,8 +233,17 @@
         }
 
         function backspace() {
-            // Do nothing if result just shown or waiting for second operand
-            if (waitingForSecondOperand) return;
+            // If waiting for second operand, undo the operator
+            if (waitingForSecondOperand) {
+                waitingForSecondOperand = false;
+                operator = null;
+                expressionHistory = '';
+                displayValue = String(firstOperand);
+                firstOperand = null;
+                clearActiveOperator();
+                updateDisplay();
+                return;
+            }
             if (displayValue.length > 1) {
                 displayValue = displayValue.slice(0, -1);
             } else {
