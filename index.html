@@ -163,13 +163,17 @@
         let expressionHistory = '';
 
         function updateDisplay() {
-            display.innerText = formatDisplay(displayValue);
-
-            // Text auto-scaling for long numbers
-            if (displayValue.length > 6) {
-                display.style.fontSize = '45px';
+            // Show operator in main display when waiting for second operand
+            if (waitingForSecondOperand && operator) {
+                display.innerText = formatDisplay(String(firstOperand)) + ' ' + operatorSymbols[operator];
+                display.style.fontSize = '55px';
             } else {
-                display.style.fontSize = '70px';
+                display.innerText = formatDisplay(displayValue);
+                if (displayValue.length > 6) {
+                    display.style.fontSize = '45px';
+                } else {
+                    display.style.fontSize = '70px';
+                }
             }
 
             // Update expression preview line
@@ -233,10 +237,10 @@
         }
 
         function backspace() {
-            // If waiting for second operand, undo the operator
+            // If waiting for second operand, undo only the operator
             if (waitingForSecondOperand) {
-                waitingForSecondOperand = false;
                 operator = null;
+                waitingForSecondOperand = false;
                 expressionHistory = '';
                 displayValue = String(firstOperand);
                 firstOperand = null;
@@ -244,6 +248,8 @@
                 updateDisplay();
                 return;
             }
+            // If result was just calculated, do nothing
+            if (firstOperand === null && operator === null && expressionHistory) return;
             if (displayValue.length > 1) {
                 displayValue = displayValue.slice(0, -1);
             } else {
