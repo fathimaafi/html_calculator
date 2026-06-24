@@ -32,8 +32,10 @@ jobs:
         port: 22
         script: |
           sudo mkdir -p /var/www/html
-          sudo chown ${{ secrets.VM_USER }}:${{ secrets.VM_USER }} /var/www/html
+          sudo chown github-actions-deploy:github-actions-deploy /var/www/html
           sudo chmod 755 /var/www/html
+          # Make index.html writable by github-actions-deploy before scp
+          [ -f /var/www/html/index.html ] && sudo chown github-actions-deploy:github-actions-deploy /var/www/html/index.html || true
 
     # Step 4: Copy index.html directly to /var/www/html
     - name: Copy index.html to Web Root
