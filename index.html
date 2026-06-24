@@ -109,11 +109,8 @@
 
         /* Zero button layout */
         .btn-zero {
-            grid-column: span 2;
-            width: 100%;
-            border-radius: 32px;
-            justify-content: flex-start;
-            padding-left: 24px;
+            width: 64px;
+            border-radius: 50%;
         }
     </style>
 </head>
@@ -126,7 +123,7 @@
         </div>
         <div class="buttons">
             <button class="btn-gray" onclick="clearDisplay()" id="clear-btn">AC</button>
-            <button class="btn-gray" onclick="toggleSign()">+/-</button>
+            <button class="btn-gray" onclick="backspace()">⌫</button>
             <button class="btn-gray" onclick="inputPercent()">%</button>
             <button class="btn-orange operator" onclick="handleOperator('/')">÷</button>
 
@@ -146,6 +143,7 @@
             <button class="btn-orange operator" onclick="handleOperator('+')">+</button>
 
             <button class="btn-dark btn-zero" onclick="inputNumber('0')">0</button>
+            <button class="btn-gray" onclick="toggleSign()">+/-</button>
             <button class="btn-dark" onclick="inputDecimal()">.</button>
             <button class="btn-orange" onclick="calculate()">=</button>
         </div>
@@ -232,6 +230,38 @@
                 displayValue += '.';
             }
             updateDisplay();
+        }
+
+        function backspace() {
+            // Do nothing if result just shown or waiting for second operand
+            if (waitingForSecondOperand) return;
+            if (displayValue.length > 1) {
+                displayValue = displayValue.slice(0, -1);
+            } else {
+                displayValue = '0';
+            }
+            updateDisplay();
+        }
+
+        // Keyboard support
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') inputNumber(e.key);
+            else if (e.key === '.') inputDecimal();
+            else if (e.key === '+') handleOperatorKey('+');
+            else if (e.key === '-') handleOperatorKey('-');
+            else if (e.key === '*') handleOperatorKey('*');
+            else if (e.key === '/') { e.preventDefault(); handleOperatorKey('/'); }
+            else if (e.key === 'Enter' || e.key === '=') calculate();
+            else if (e.key === 'Backspace') backspace();
+            else if (e.key === 'Escape') clearDisplay();
+        });
+
+        function handleOperatorKey(op) {
+            const btn = [...document.querySelectorAll('.operator')].find(b => {
+                const map = { '/': '÷', '*': '×', '+': '+', '-': '−' };
+                return b.innerText === map[op];
+            });
+            if (btn) btn.click();
         }
 
         function toggleSign() {
